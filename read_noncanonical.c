@@ -19,7 +19,12 @@
 #define FALSE 0
 #define TRUE 1
 
-#define BUF_SIZE 256
+#define BUF_SIZE 5
+
+#define FLAG 0x7E
+#define A 0x03
+#define C_SET 0x03
+#define C_UA 0x07
 
 volatile int STOP = FALSE;
 
@@ -95,12 +100,20 @@ int main(int argc, char *argv[])
     {
         // Returns after 5 chars have been input
         int bytes = read(fd, buf, BUF_SIZE);
-        buf[bytes] = '\0'; // Set end of string to '\0', so we can printf
-
-        printf(":%s:%d\n", buf, bytes);
-        if (buf[0] == 'z')
+        if (buf[0] == FLAG && buf[1] == A && buf[2] == C_SET && buf[3] == (A ^ C_SET) && buf[4] == FLAG) {
+            printf("SET received\n");
             STOP = TRUE;
+        }
+        else {
+            printf("Invalid SET received\n");
+        }
     }
+    //answer with UA
+    unsigned char ua[BUF_SIZE] = {FLAG, A, C_UA, A ^ C_UA, FLAG};
+    int bytesA = write(fd, ua, BUF_SIZE);
+    printf("%d bytes written\n", bytesA);
+    //wait for bytes to write
+    sleep(1);
 
     // The while() cycle should be changed in order to respect the specifications
     // of the protocol indicated in the Lab guide
@@ -112,6 +125,7 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
+    printf("quitting\n");
     close(fd);
 
     return 0;

@@ -19,7 +19,12 @@
 #define FALSE 0
 #define TRUE 1
 
-#define BUF_SIZE 256
+#define BUF_SIZE 5
+
+#define FLAG 0x7E
+#define A 0x03
+#define C_SET 0x03
+#define C_UA 0x07
 
 volatile int STOP = FALSE;
 
@@ -90,17 +95,13 @@ int main(int argc, char *argv[])
     printf("New termios structure set\n");
 
     // Create string to send
-    unsigned char buf[BUF_SIZE] = {0};
+    unsigned char buf[BUF_SIZE] = {FLAG, A, C_SET, A ^ C_SET, FLAG};
 
-    for (int i = 0; i < BUF_SIZE; i++)
-    {
-        buf[i] = 'a' + i % 26;
-    }
+    
 
     // In non-canonical mode, '\n' does not end the writing.
     // Test this condition by placing a '\n' in the middle of the buffer.
     // The whole buffer must be sent even with the '\n'.
-    buf[5] = '\n';
 
     int bytes = write(fd, buf, BUF_SIZE);
     printf("%d bytes written\n", bytes);
@@ -108,13 +109,26 @@ int main(int argc, char *argv[])
     // Wait until all bytes have been written to the serial port
     sleep(1);
 
+    //get UA
+    unsigned char ua[BUF_SIZE] = {0};
+    int bytesA = read(fd, ua, BUF_SIZE);
+    while (STOP == FALSE) {
+        if (ua[0] == FLAG && ua[1] == A && ua[2] == C_UA && ua[3] == (A ^ C_UA) && ua[4] == FLAG) {
+            printf("UA received\n");
+            STOP = TRUE;
+        }
+        else {
+            printf("Invalid UA received\n");
+        }
+    }
+
     // Restore the old port settings
     if (tcsetattr(fd, TCSANOW, &oldtio) == -1)
     {
         perror("tcsetattr");
         exit(-1);
     }
-
+    printf("quitting\n");
     close(fd);
 
     return 0;
