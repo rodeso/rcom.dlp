@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include <termios.h>
 #include <unistd.h>
-
+#include <signal.h>
 // Baudrate settings are defined in <asm/termbits.h>, which is
 // included by <termios.h>
 #define BAUDRATE B38400
@@ -25,8 +25,26 @@
 #define A 0x03
 #define C_SET 0x03
 #define C_UA 0x07
-
 volatile int STOP = FALSE;
+
+int alarmEnabled = FALSE;
+int alarmCount = 0;
+
+// Alarm function handler
+void alarmHandler(int signal)
+{
+    alarmEnabled = FALSE;
+    alarmCount++;
+    
+    //do something else maybe?
+
+    printf("Alarm #%d\n", alarmCount);
+    
+    if (alarmCount > 4) 
+    {
+		return;
+	}
+}
 
 int main(int argc, char *argv[])
 {
@@ -103,25 +121,51 @@ int main(int argc, char *argv[])
     // Test this condition by placing a '\n' in the middle of the buffer.
     // The whole buffer must be sent even with the '\n'.
 
-    int bytes = write(fd, buf, BUF_SIZE);
-    printf("%d bytes written\n", bytes);
 
-    // Wait until all bytes have been written to the serial port
-    sleep(1);
+	(void)signal(SIGALRM, alarmHandler);
 
-    //get UA
-    unsigned char ua[BUF_SIZE] = {0};
-    int bytesA = read(fd, ua, BUF_SIZE);
-    while (STOP == FALSE) {
-        if (ua[0] == FLAG && ua[1] == A && ua[2] == C_UA && ua[3] == (A ^ C_UA) && ua[4] == FLAG) {
-            printf("UA received\n");
-            STOP = TRUE;
-        }
-        else {
-            printf("Invalid UA received\n");
-        }
-    }
+	while (alarmCount < 4)
+	{
+		int bytes = write(fd, buf, BUF_SIZE);
+		printf("%d bytes written\n", bytes);
+		
+		
+		
+		//start alarm
+		if (alarmEnabled == FALSE)
+		{
+			alarm(3); // Set alarm to be triggered in 3s
+			alarmEnabled = TRUE;
+		}
+		
+		// Wait until all bytes have been written to the serial port
+		
+		while (alarmEnabled == TRUE) {
+			//get UA
+			unsigned char ua[BUF_SIZE] = {0};
+			printf("before read UA\n");
+			int bytesA = read(fd, ua, BUF_SIZE);
+			printf("after read UA\n");
 
+		
+			if (ua[0] == FLAG && ua[1] == A && ua[2] == C_UA && ua[3] == (A ^ C_UA) && ua[4] == FLAG) 
+			{
+				printf("UA received\n");
+				alarmEnabled = FALSE;
+				alarm(0);
+				alarmCount = 4;
+			}
+			else 
+			{
+				printf("Invalid UA received\n");
+				alarmEnabled == FALSE;
+				sleep(3);
+				
+			}
+		}
+	}
+
+	jump:
     // Restore the old port settings
     if (tcsetattr(fd, TCSANOW, &oldtio) == -1)
     {
