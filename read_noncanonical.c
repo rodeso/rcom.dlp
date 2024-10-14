@@ -109,16 +109,11 @@ int main(int argc, char *argv[])
         }
     }
     //answer with UA
-    int c = 5;
-    while (c > 0) {
-        unsigned char ua[BUF_SIZE] = {FLAG, A, C_UA, A ^ C_UA, FLAG};
-        int bytesA = write(fd, ua, BUF_SIZE);
-        printf("%d bytes written\n", bytesA);
-        //wait for bytes to write
-        sleep(2); 
-        c--;
-    }
-    
+    unsigned char ua[BUF_SIZE] = {FLAG, A, C_UA, A ^ C_UA, FLAG};
+    int bytesA = write(fd, ua, BUF_SIZE);
+    printf("%d bytes written\n", bytesA);
+    //wait for bytes to write
+    sleep(1);
 
     // The while() cycle should be changed in order to respect the specifications
     // of the protocol indicated in the Lab guide
