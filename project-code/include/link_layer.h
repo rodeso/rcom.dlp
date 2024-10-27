@@ -19,6 +19,20 @@ typedef struct
     int timeout;
 } LinkLayer;
 
+LinkLayer connectionParameters;
+
+typedef enum
+{
+    START,
+    STOP,
+    FLAG_SM,
+    A_SM,
+    C_SM,
+    BCC_SM,
+} LinkLayerSM;
+
+
+
 // SIZE of maximum acceptable payload.
 // Maximum number of bytes that application layer should send to link layer
 #define MAX_PAYLOAD_SIZE 1000

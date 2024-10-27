@@ -10,14 +10,14 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename)
 {
     // TODO
-    
+    int frames = 0;
+	LinkLayerRole rolex;
     //Role
-    LinkLayerRole rolex;
     switch (role[0])
     {
 		case 't':
 			rolex = LlTx;
-			break:
+			break;
 		case 'r':
 			rolex = LlRx;
 			break;
@@ -27,8 +27,13 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 	}
 	
 	//LinkLayer
-	LinkLayer connectionParameters;
-    connectionParameters = {serialPort, rolex, baudRate, nTries, timeout}
+    LinkLayer connectionParameters = {
+		.serialPort = serialPort,
+		.role = rolex,
+		.baudRate = baudRate,
+		.nRetransmissions = nTries,
+		.timeout = timeout
+	};
     
     //llopen
 	if (llopen(connectionParameters)<0);
@@ -42,7 +47,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     case LlTx:
 		//code
 		break;
-	case LlRxx:
+	case LlRx:
 		//code
 		break;
 	default:
