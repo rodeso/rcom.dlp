@@ -98,6 +98,7 @@ int main(int argc, char *argv[])
 
     while (STOP == FALSE)
     {
+        
         // Returns after 5 chars have been input
         int bytes = read(fd, buf, BUF_SIZE);
         if (buf[0] == FLAG && buf[1] == A && buf[2] == C_SET && buf[3] == (A ^ C_SET) && buf[4] == FLAG) {
