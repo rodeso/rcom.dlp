@@ -29,6 +29,8 @@ typedef enum
     A_SM,
     C_SM,
     BCC_SM,
+    READ_SM,
+    ESC_SM
 } LinkLayerSM;
 
 
