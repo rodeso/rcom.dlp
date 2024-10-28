@@ -211,99 +211,136 @@ int llread(unsigned char *packet)
 int llclose(int showStatistics)
 {
     // TODO
+    LinkLayerSM state = START;
+
+    unsigned char byte;
+    timeout = connectionParameters.timeout;
+    
+
     switch (connectionParameters.role) 
     {
-    case LlTx:
-        unsigned char message[5] = {FLAG, A_Tx, C_DISC, A_Tx ^ C_SET, FLAG}; 
-        writeBytesSerialPort(message, 5);
-        while() {
-            while() {
-                if (readByteSerialPort)
-                switch()
-                case START
-            }
-        }
-        break;
-    case LlRx:
-        LinkLayerSM state = START;
-        int a = 0;
-        int c = 0;
-
-        while(state != STOP && alarmCount < 3) 
+        case LlTx:
         {
-
-            if (alarmEnabled == FALSE)
+            signal(alarmHandler);
+            while (retransmitions < connectionParameters.nRetransmissions && state != STOP)
             {
-                printf("alarme de 3 segundos \n");
-                alarm(3); // Set alarm to be triggered in 3s
+                unsigned char message[5] = {FLAG, A_Tx, C_DISC, A_Tx ^ C_DISC, FLAG}; 
+                writeBytesSerialPort(message, 5);
+                alarm(connectionParameters.timeout);
                 alarmEnabled = TRUE;
-            }
 
-            unsigned char byte = 0;
-            readByteSerialPort(byte);
-
-            switch (state)
-            {
-            case START:
-                if(byte == FLAG) {
-                    state = FLAG_SM;
+                while(alarmEnabled == TRUE && state != STOP)
+                {
+                    readByteSerialPort(byte);
+                    switch (state)
+                    {
+                    case START:
+                        if(byte == FLAG) {
+                            state = FLAG_SM;
+                        }
+                        break;
+                    case FLAG_SM:
+                        if(byte == A_Rx) {
+                            state = A_SM;
+                        } else if (byte != FLAG) {
+                            state = START;
+                        }
+                        break;
+                    case A_SM:
+                        if(byte == C_UA) {
+                            state = C_SM;
+                        } else if (byte == FLAG) {
+                            state = FLAG_SM;
+                        } else {
+                            state = START;
+                        }
+                        break;
+                    case C_SM:
+                        if(byte == A_Rx ^ C_UA) {
+                            state = BCC_SM;
+                        } else if (byte == FLAG) {
+                            state = FLAG_SM;
+                        } else {
+                            state = START;
+                        }
+                        break;
+                    case BCC_SM:
+                        if(byte == FLAG) {
+                            state = STOP;
+                            alarmEnabled = FALSE;
+                            alarm(0);
+                        } else {
+                            state = START;
+                        }
+                        break;
+                    default:
+                        break;
+                    }
                 }
-                break;
-            case FLAG_SM:
-                if(byte == FLAG) {
-                    buf2[0] = byte;
-                } else if (byte == ADDRESS_RECIVE) {
-                    buf2[1] = byte;
-                    a_prov = byte;
-                    state = A_STATE;
-                } else {
-                    state = START_STATE;
-                }
-                break;
-            case A_STATE:
-                if(byte == FLAG) {
-                    buf2[0] = byte;
-                    state = FLAG_STATE;
-                } else if (byte == CONTROLL_RECIVE) {
-                    buf2[2] = byte;
-                    c_prov = byte;
-                    state = C_STATE;
-                } else {
-                    state = START_STATE;
-                }
-                break;
-            case C_STATE:
-                if(byte == FLAG) {
-                    buf2[0] = byte;
-                    state = FLAG_STATE;
-                } else if (byte == a_prov ^ c_prov) {
-                    buf2[3] = byte;
-                    state = BCC_STATE;
-                } else {
-                    state = START_STATE;
-                }
-                break;
-            case BCC_STATE:
-                if(byte == FLAG) {
-                    buf2[4] = byte;
-                    state = STOP_STATE;
-                    alarm(0);
-                } else {
-                    state = START_STATE;
-                }
-                break;
-            default:
-                break;
+                retransmitions++;
             }
+            if (state != STOP) {
+                return -1;
+            }
+            break;
         }
-        
-        unsigned char message[5] = {FLAG, A_Rx, C_DISC, A_Rx ^ C_SET, FLAG};
-        writeBytesSerialPort(message, 5);
-        break;
-    default:
-        printf("error in role");
-        return -1;
+        case LlRx:
+        {
+            while (state != STOP)
+            {
+                readByteSerialPort(byte);
+                switch (state)
+                {
+                case START:
+                    if(byte == FLAG) {
+                        state = FLAG_SM;
+                    }
+                    break;
+                case FLAG_SM:
+                    if(byte == A_Tx) {
+                        state = A_SM;
+                    } else if (byte != FLAG) {
+                        state = START;
+                    }
+                    break;
+                case A_SM:
+                    if(byte == C_SET) {
+                        state = C_SM;
+                    } else if (byte == FLAG) {
+                        state = FLAG_SM;
+                    } else {
+                        state = START;
+                    }
+                    break;
+                case C_SM:
+                    if(byte == A_Tx ^ C_SET) {
+                        state = BCC_SM;
+                    } else if (byte == FLAG) {
+                        state = FLAG_SM;
+                    } else {
+                        state = START;
+                    }
+                    break;
+                case BCC_SM:
+                    if(byte == FLAG) {
+                        state = STOP;
+                    } else {
+                        state = START;
+                    }
+                    break;
+                default:
+                    break;
+                }
+            }
+            unsigned char message[5] = {FLAG, A_Rx, C_DISC, A_Rx ^ C_DISC, FLAG};
+            writeBytesSerialPort(message, 5);
+            break;
+        }
+        default:
+            printf("error in role");
+            return -1;
     }
+
     
 	printf("The Number of frames is %d\n", showStatistics);
     int clstat = closeSerialPort();
