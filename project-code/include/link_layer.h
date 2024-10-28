@@ -19,8 +19,6 @@ typedef struct
     int timeout;
 } LinkLayer;
 
-LinkLayer connectionParameters;
-
 typedef enum
 {
     START,

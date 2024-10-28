@@ -1,2 +1,5 @@
 # Ignore object files
 *.o
+project-code/bin/*
+.vscode/*
+project-code/.vscode/*

@@ -4,7 +4,15 @@
 #include "link_layer.h"
 
 
+#include <fcntl.h>
 #include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <termios.h>
+#include <unistd.h>
+#include <stdlib.h>
+
 
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename)
@@ -28,15 +36,17 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 	
 	//LinkLayer
     LinkLayer connectionParameters = {
-		.serialPort = serialPort,
 		.role = rolex,
 		.baudRate = baudRate,
 		.nRetransmissions = nTries,
 		.timeout = timeout
 	};
+	strcpy(connectionParameters.serialPort,serialPort);
     
     //llopen
-	if (llopen(connectionParameters)<0);
+	int error1 = llopen(connectionParameters);
+	printf("Error 1: %d\n",error1);
+	if (error1 == -1)
 	{
 		printf("Error in llopen\n");
 		return;
@@ -128,26 +138,22 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
 
 		//create Control Packet 3
-		unsigned int cpSize;
-		const int L1 = sizeof(fileSize);
-		const int L2 = strlen(filename);
-		cpSize = 1+2+L1+2+L2;
 		unsigned char *controlPacketEnd = (unsigned char*)malloc(cpSize);
 		
-		unsigned int pos = 0;
-		controlPacketEnd[pos++]=3; //end
-		controlPacketEnd[pos++]=0; //type (file size)
-		controlPacketEnd[pos++]=L1; //length (file size)
+		unsigned int sop = 0;
+		controlPacketEnd[sop++]=3; //end
+		controlPacketEnd[sop++]=0; //type (file size)
+		controlPacketEnd[sop++]=L1; //length (file size)
 
 		for (int i = 0; i < L1; i++) 
 		{
-			controlPacketEnd[pos + i] = (fileSize >> (8 * (L1 - 1 - i))) & 0xFF; // MSB first
+			controlPacketEnd[sop + i] = (fileSize >> (8 * (L1 - 1 - i))) & 0xFF; // MSB first
 		}
-		pos += L1; // Move the position forward
+		sop += L1; // Move the position forward
 
-		controlPacketEnd[pos++]=1; //type (file name)
-		controlPacketEnd[pos++]=L2; //length (file name)
-		memcpy(controlPacketEnd+pos, filename, L2); //file name
+		controlPacketEnd[sop++]=1; //type (file name)
+		controlPacketEnd[sop++]=L2; //length (file name)
+		memcpy(controlPacketEnd+sop, filename, L2); //file name
 
 		//write Control Packet 3
 		if (llwrite(controlPacketEnd, cpSize)<0)
@@ -179,12 +185,11 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
 		memcpy(fileSizeAux, packet + 3, fileSizeNBytes); // Copy the file size from the packet
 
-		long rxFileSize = 0; // Initialize the variable
 		for (unsigned int i = 0; i < fileSizeNBytes; i++) {
 			rxFileSize |= (fileSizeAux[fileSizeNBytes - i - 1] << (8 * i)); // Reconstruct the file size
 		}
 
-		free(fileSizeAux); // Free the dynamically allocated memory after use
+		//free(fileSizeAux); // Free the dynamically allocated memory after use
 
 
 		// File Name
@@ -207,7 +212,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
    				buffer += packetSize+4;
 				
                 fwrite(buffer, sizeof(unsigned char), packetSize-4, newFile);
-                free(buffer);
+                //free(buffer); 3
             }
             else continue;
         }
