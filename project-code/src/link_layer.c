@@ -292,7 +292,7 @@ int llwrite(const unsigned char *buf, int bufSize)
         }
     }
     free(frame);
-    if(ack) llclose(frames);
+    if(ack) return 0;
     return -1;
 }
 
