@@ -17,7 +17,7 @@
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename)
 {
-
+	printf("Starting application layer\n");
     int frames = 0;
 	LinkLayerRole rolex;
     //Role
@@ -61,13 +61,14 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 			printf("Error opening file\n");
 			return;
 		}
+		printf("File opened\n");
 
 		//prepare Control Packet 1
 		fseek(file, 0, SEEK_END);
 		long int fileSize = ftell(file);
 		fseek(file, 0, SEEK_SET);
 
-		
+		printf("File size: %ld\n", fileSize);
 
 		//create Control Packet 1
 		unsigned int cpSize;
@@ -80,6 +81,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 		controlPacketStart[pos++]=1; //start
 		controlPacketStart[pos++]=0; //type (file size)
 		controlPacketStart[pos++]=L1; //length (file size)
+
+		printf("File size: %ld\n", fileSize);
 
 		for (int i = 0; i < L1; i++) 
 		{
@@ -170,7 +173,10 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 		//create packet
 		unsigned char *packet = (unsigned char *)malloc(MAX_PAYLOAD_SIZE);
         int packetSize = -1;
-        while ((packetSize = llread(packet)) < 0);
+        while ((packetSize = llread(packet)) < 0) 
+		{
+			printf("Reading\n");
+		}
 
 		//parse Control Packet 1
 
