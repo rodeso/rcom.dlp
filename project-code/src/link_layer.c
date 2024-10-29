@@ -25,7 +25,7 @@
 
 #define C_RR(Nr) (0xAA | (Nr & 1))
 #define C_REJ(Nr) (0x54 | (Nr & 1))
-#define C_N(Ns) (Ns << 7) 
+#define C_N(Ns) (Ns << 7)
 int Ns = 0;
 int Nr = 1;
 
@@ -34,6 +34,7 @@ int alarmCount = 0;
 int alarmEnabled = FALSE;
 int timeout = 0;
 int retransmitions = 0;
+int role;
 
 
 
@@ -116,6 +117,7 @@ int llopen(LinkLayer connectionParameters)
     unsigned char byte;
     timeout = connectionParameters.timeout;
     retransmitions = connectionParameters.nRetransmissions;
+    role = connectionParameters.role == LlTx ? 0 : 1;
 
     switch (connectionParameters.role) 
     {
@@ -126,7 +128,7 @@ int llopen(LinkLayer connectionParameters)
             while (tries < retransmitions && state != STOP)
             {
                 unsigned char message[5] = {FLAG, A_Tx, C_SET, A_Tx ^ C_SET, FLAG}; 
-                if (writeBytesSerialPort(message, 5))
+                if (writeBytesSerialPort(message, 5) == -1)
                 {
                     printf("Error writing SET\n");
                     return -1;
@@ -216,7 +218,7 @@ int llopen(LinkLayer connectionParameters)
                 byte = 0;
                 if (readByteSerialPort(&byte))
                 {
-                    printf("byte: %#X\n________\n", byte);
+                    printf("byte: %#X\n", byte);
                     switch (state)
                     {
                     case START:
@@ -284,7 +286,7 @@ int llopen(LinkLayer connectionParameters)
                 printf("message[%ld]: %#X\n", i, message[i]);
             }
             
-            if (writeBytesSerialPort(message, 5))
+            if (writeBytesSerialPort(message, 5) == -1)
             {
                 printf("Error writing UA\n");
                 return -1;
@@ -331,7 +333,6 @@ int llwrite(const unsigned char *buf, int bufSize)
         else 
         {
             frame[j++] = buf[i];
-            printf("buf[%d]: %#X\n", i, buf[i]);
         }
     }
     printf("Write after content\n");
@@ -343,7 +344,11 @@ int llwrite(const unsigned char *buf, int bufSize)
     int tries = 0;
     int rej = 0;
     int ack = 0;
-
+    printf("Printing Full Frame: \n");
+    for (unsigned int i = 0; i < frames+6; i++)
+    {
+        printf("frame[%d]: %#X\n", i, frame[i]);
+    }
     while (tries < retransmitions) 
     {
         alarmEnabled = FALSE;
@@ -351,7 +356,7 @@ int llwrite(const unsigned char *buf, int bufSize)
         alarmEnabled = TRUE;
         while (alarmEnabled == TRUE && !rej && !ack) 
         {
-            if (writeBytesSerialPort(frame, frames)) 
+            if (writeBytesSerialPort(frame, frames) == -1) 
             {
                 printf("Error writing frame\n");
                 return -1;
@@ -407,16 +412,15 @@ int llread(unsigned char *packet)
     LinkLayerSM state = START;
     unsigned char byte, ret = 0;
     int i = 0;
-    int frames = 0;
+    int n = 0;
     while (state != STOP) 
     {
         if (readByteSerialPort(&byte))
         {
-            printf("byte: %#X\n________\n", byte);
+            if (n < 5) printf("byte: %#X\n", byte);
             switch (state) 
             {
                 case START:
-                    printf("State: Start\n");
                     if (byte == FLAG) state = FLAG_SM;
                     break;
                 case FLAG_SM:
@@ -452,12 +456,14 @@ int llread(unsigned char *packet)
                     if (byte == ESC) state = ESC_SM; //vai desfazer o byte stuffing
                     else if (byte == FLAG) //termina o pacote
                     { 
-                        unsigned char bcc2 = packet[i-1];
-                        i--;
+                        unsigned char bcc2 = packet[-1];
                         packet[i] = '\0';
                         unsigned char acc = packet[0];
                         for (unsigned int j = 1; j < i; j++)
                                 acc ^= packet[j];
+
+                        printf("BCC: %#X\n", bcc2);
+                        printf("ACC: %#X\n", acc);
                         if (bcc2 == acc)
                         {
                             state = STOP;
@@ -479,7 +485,6 @@ int llread(unsigned char *packet)
                     else
                     {
                         packet[i++] = byte; //escreve o byte no pacote
-                        printf("packet[%d]: %#X\n", i-1, packet[i-1]);
                     }
                     break;
                 case ESC_SM:
@@ -488,7 +493,9 @@ int llread(unsigned char *packet)
                     break;
                 default: 
                     break;
+                
             }
+            n++;
         }
 
     }
@@ -502,74 +509,194 @@ int llread(unsigned char *packet)
 int llclose(int showStatistics)
 {
     LinkLayerSM state = START;
-
     unsigned char byte;
-    int tries = 0;
 
-    (void) signal(SIGALRM, alarmHandler);
-    while (tries < retransmitions && state != STOP)
+    switch (role) 
     {
-        unsigned char message[5] = {FLAG, A_Tx, C_DISC, A_Tx ^ C_DISC, FLAG}; 
-        writeBytesSerialPort(message, 5);
-        alarm(timeout);
-        alarmEnabled = TRUE;
-
-        while(alarmEnabled == TRUE && state != STOP)
-        {
-            if (readByteSerialPort(&byte))
+        case 0:
+        {   
+            (void) signal(SIGALRM, alarmHandler);
+            int tries = 0;
+            while (tries < retransmitions && state != STOP)
             {
-                switch (state)
+                unsigned char message[5] = {FLAG, A_Tx, C_DISC, A_Tx ^ C_DISC, FLAG}; 
+                if (writeBytesSerialPort(message, 5))
                 {
-                case START:
-                    if(byte == FLAG) {
-                        state = FLAG_SM;
+                    printf("Error writing SET\n");
+                    return -1;
+                }
+                alarm(timeout);
+                alarmEnabled = TRUE;
+                while(alarmEnabled == TRUE && state != STOP)
+                {
+                    byte = 0;
+                    if (readByteSerialPort(&byte)) {
+                        printf("byte: %#X\n", byte);
+                        switch (state)
+                        {
+                        case START:
+                            if(byte == FLAG) 
+                            {
+                                state = FLAG_SM;
+                            }
+                            break;
+                        case FLAG_SM:
+                            printf("State: Flag\n");
+                            if(byte == A_Rx)
+                            {
+                                state = A_SM;
+                            } else if (byte != FLAG)
+                            {
+                                state = START;
+                            }
+                            break;
+                        case A_SM:
+                            printf("State: A\n");
+                            if(byte == C_UA) 
+                            {
+                                state = C_SM;
+                            } else if (byte == FLAG) 
+                            {
+                                state = FLAG_SM;
+                            } else {
+                                state = START;
+                            }
+                            break;
+                        case C_SM:
+                            printf("State: C\n");
+                            if(byte == (A_Rx ^ C_UA)) 
+                            {
+                                state = BCC_SM;
+                            } else if (byte == FLAG) 
+                            {
+                                state = FLAG_SM;
+                            } else
+                            {
+                                state = START;
+                            }
+                            break;
+                        case BCC_SM:
+                            printf("State: BCC\n");
+                            if(byte == FLAG) 
+                            {
+                                state = STOP;
+                                alarm(0);
+                                alarmEnabled = FALSE;
+                                
+                            } else 
+                            {
+                                state = START;
+                            }
+                            break;
+                        default:
+                            break;
+                        }
                     }
-                    break;
-                case FLAG_SM:
-                    if(byte == A_Rx) {
-                        state = A_SM;
-                    } else if (byte != FLAG) {
-                        state = START;
+                }
+                tries++;
+            }
+            if (state != STOP) 
+            {
+                return -1;
+            }
+            if (state == 1) printf("State: STOP\n");
+            unsigned char message[5] = {FLAG, A_Tx, C_DISC, A_Tx ^ C_UA, FLAG};
+            if (writeBytesSerialPort(message, 5))
+                {
+                    printf("Error writing SET\n");
+                    return -1;
+                }
+
+            break;
+        }
+        case 1:
+        {
+            while (state != STOP)
+            {
+                byte = 0;
+                if (readByteSerialPort(&byte))
+                {
+                    printf("byte: %#X\n________\n", byte);
+                    switch (state)
+                    {
+                    case START:
+                    
+                        if(byte == FLAG) 
+                        {
+                            state = FLAG_SM;
+                        }
+                        break;
+                    case FLAG_SM:
+                        printf("State: Flag\n");
+                        if(byte == A_Tx) 
+                        {
+                            state = A_SM;
+                        } else if (byte != FLAG) 
+                        {
+                            state = START;
+                        }
+                        break;
+                    case A_SM:
+                        printf("State: A\n");
+                        if(byte == C_DISC) 
+                        {
+                            state = C_SM;
+                        } else if (byte == FLAG)
+                        {
+                            state = FLAG_SM;
+                        } else 
+                        {
+                            state = START;
+                        }
+                        break;
+                    case C_SM:
+                        printf("State: C\n");
+                        if(byte == (A_Tx ^ C_DISC)) 
+                        {
+                            state = BCC_SM;
+                        } else if (byte == FLAG) 
+                        {
+                            state = FLAG_SM;
+                        } else 
+                        {
+                            state = START;
+                        }
+                        break;
+                    case BCC_SM:
+                        printf("State: BCC\n");
+                        if(byte == FLAG) 
+                        {
+                            state = STOP;
+                        } else 
+                        {
+                            state = START;
+                        }
+                        break;
+                    default:
+                        break;
                     }
-                    break;
-                case A_SM:
-                    if(byte == C_UA) {
-                        state = C_SM;
-                    } else if (byte == FLAG) {
-                        state = FLAG_SM;
-                    } else {
-                        state = START;
-                    }
-                    break;
-                case C_SM:
-                    if(byte == (A_Rx ^ C_UA)) {
-                        state = BCC_SM;
-                    } else if (byte == FLAG) {
-                        state = FLAG_SM;
-                    } else {
-                        state = START;
-                    }
-                    break;
-                case BCC_SM:
-                    if(byte == FLAG) {
-                        state = STOP;
-                        alarmEnabled = FALSE;
-                        alarm(0);
-                    } else {
-                        state = START;
-                    }
-                    break;
-                default:
-                    break;
                 }
             }
+            if (state == 1) printf("State: STOP\n");
+            unsigned char message[5] = {FLAG, A_Rx, C_UA, A_Rx ^ C_UA, FLAG};
+            for (size_t i = 0; i < 5; i++)
+            {
+                printf("message[%ld]: %#X\n", i, message[i]);
+            }
+            
+            if (writeBytesSerialPort(message, 5))
+            {
+                printf("Error writing UA\n");
+                return -1;
+            }
+            break;
         }
-        tries++;
+        default:
+            printf("error in role");
+            return -1;
     }
-    if (state != STOP) {
-        return -1;
-    }
-  
+	printf("Closing llclose\n");
+
 	printf("The size of frames is %d\n", showStatistics);
     int clstat = closeSerialPort();
     return clstat;

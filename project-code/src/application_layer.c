@@ -166,7 +166,6 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 		}
 
 		frames++;
-        llclose(frames);
 
 		break;
 	case LlRx:
@@ -206,16 +205,16 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 		name[fileNameNBytes] = '\0'; // Null-terminate the string if needed
 
 
-        FILE* newFile = fopen((char *) name, "wb+");
+        FILE* newFile = fopen((char *) filename, "wb+");
         while (1) {    
     	    while ((packetSize = llread(packet)) < 0);
             if(packetSize == 0) break;
-            else if(packet[0] != 2){
+            else if(packet[0] != 3){
                 unsigned char *buffer = (unsigned char*)malloc(packetSize);
 
 				//parse Data Packet
                 memcpy(buffer,packet+4,packetSize-4);
-   				buffer += packetSize+4;
+   				//buffer += packetSize+4;
 				
                 fwrite(buffer, sizeof(unsigned char), packetSize-4, newFile);
                 //free(buffer); 3
@@ -229,9 +228,10 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 		printf("Invalid role\n");
 		break;
 	}
-	if (llclose(frames)<0)
+
+	if (llclose(frames) < 0)
 	{
-		printf("Error Closing\n");
+		printf("Error on llclose");
 		return;
 	}
 }
