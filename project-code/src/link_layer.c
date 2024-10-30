@@ -308,7 +308,7 @@ int llopen(LinkLayer connectionParameters)
 int llwrite(const unsigned char *buf, int bufSize)
 {
     int frames = 6+bufSize;
-    unsigned char *frame = (unsigned char *) malloc(6+frames);
+    unsigned char *frame = (unsigned char *) malloc(frames);
     frame[0] = FLAG;
     frame[1] = A_Tx;
     frame[2] = C_N(Ns);
@@ -316,24 +316,14 @@ int llwrite(const unsigned char *buf, int bufSize)
     
     printf("Write before content\n");
     int j = 4;
-    for (unsigned int i = 0 ; i < bufSize ; i++) 
-    {
-        if(buf[i] == FLAG) 
-        {
+    for (unsigned int i = 0 ; i < bufSize ; i++) {
+        if(buf[i] == FLAG || buf[i] == ESC) {
+            printf("Stuffing");
             frame = realloc(frame,++frames);
             frame[j++] = ESC;
-            frame[j++] = 0x5E;
+            frame[j++] = buf[i] ^ 0x20;
         }
-        if (buf[i] == ESC) 
-        {
-            frame = realloc(frame,++frames);
-            frame[j++] = ESC;
-            frame[j++] = 0x5D;
-        }
-        else 
-        {
-            frame[j++] = buf[i];
-        }
+        else frame[j++] = buf[i];
     }
     printf("Write after content\n");
     unsigned char BCC = buf[0];
@@ -345,7 +335,7 @@ int llwrite(const unsigned char *buf, int bufSize)
     int rej = 0;
     int ack = 0;
     printf("Printing Full Frame: \n");
-    for (unsigned int i = 0; i < frames+6; i++)
+    for (unsigned int i = 0; i < frames; i++)
     {
         printf("frame[%d]: %#X\n", i, frame[i]);
     }
@@ -456,11 +446,13 @@ int llread(unsigned char *packet)
                     if (byte == ESC) state = ESC_SM; //vai desfazer o byte stuffing
                     else if (byte == FLAG) //termina o pacote
                     { 
-                        unsigned char bcc2 = packet[-1];
+                        unsigned char bcc2 = packet[i-1];
+                        i--;
                         packet[i] = '\0';
                         unsigned char acc = packet[0];
+
                         for (unsigned int j = 1; j < i; j++)
-                                acc ^= packet[j];
+                            acc ^= packet[j];
 
                         printf("BCC: %#X\n", bcc2);
                         printf("ACC: %#X\n", acc);
@@ -488,6 +480,7 @@ int llread(unsigned char *packet)
                     }
                     break;
                 case ESC_SM:
+                    printf("Destuffing\n");
                     state = READ_SM;
                     packet[i++] = byte ^ 0x20;
                     break;

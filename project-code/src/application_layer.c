@@ -45,7 +45,6 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     
     //llopen
 	int error1 = llopen(connectionParameters);
-	printf("Error 1: %d\n",error1);
 	if (error1 == -1)
 	{
 		printf("Error in llopen\n");
@@ -82,8 +81,6 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 		controlPacketStart[pos++]=0; //type (file size)
 		controlPacketStart[pos++]=L1; //length (file size)
 
-		printf("File size: %ld\n", fileSize);
-
 		for (int i = 0; i < L1; i++) 
 		{
 			controlPacketStart[pos + i] = (fileSize >> (8 * (L1 - 1 - i))) & 0xFF; // MSB first
@@ -115,9 +112,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 			int dataSize = bytesLeft > (long int) MAX_PAYLOAD_SIZE ? MAX_PAYLOAD_SIZE : bytesLeft;
             unsigned char* data = (unsigned char*) malloc(dataSize);
             memcpy(data, content, dataSize);
-            int packetSize;
 
-			packetSize = 1 + 1 + 2 + dataSize;
+			int packetSize = 1 + 1 + 2 + dataSize;
 			unsigned char* packet = (unsigned char*)malloc(packetSize);
 
 			packet[0] = 2; //control field
