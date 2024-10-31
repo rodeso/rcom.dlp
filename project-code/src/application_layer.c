@@ -12,13 +12,17 @@
 #include <termios.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <time.h>
+
+
+clock_t start, end;
 
 
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename)
 {
 	printf("Starting application layer\n");
-    int frames = 0;
+    int info = 0;
 	LinkLayerRole rolex;
     //Role
     switch (role[0])
@@ -98,7 +102,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 			return;
 		}
 
-		frames++;
+		info++;
 		//prepare Data Packets
 		unsigned char sequence = 0;
         long int bytesLeft = fileSize;
@@ -132,7 +136,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             bytesLeft -= (long int) MAX_PAYLOAD_SIZE; 
             content += dataSize; 
             sequence = (sequence + 1) % 255;
-			frames++;
+			info++;
 		}
 
 
@@ -161,17 +165,14 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 			return;
 		}
 
-		frames++;
+		info++;
 
 		break;
 	case LlRx:
 		//create packet
 		unsigned char *packet = (unsigned char *)malloc(MAX_PAYLOAD_SIZE);
         int packetSize = -1;
-        while ((packetSize = llread(packet)) < 0) 
-		{
-			printf("Reading\n");
-		}
+        while ((packetSize = llread(packet)) < 0) {}
 
 		//parse Control Packet 1
 
@@ -217,7 +218,6 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             }
             else break;
         }
-
         fclose(newFile);
 		break;
 	default:
@@ -225,7 +225,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 		break;
 	}
 
-	if (llclose(frames) < 0)
+	if (llclose(info) < 0)
 	{
 		printf("Error on llclose");
 		return;

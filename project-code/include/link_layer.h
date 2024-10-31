@@ -19,18 +19,6 @@ typedef struct
     int timeout;
 } LinkLayer;
 
-typedef enum
-{
-    START,
-    STOP,
-    FLAG_SM,
-    A_SM,
-    C_SM,
-    BCC_SM,
-    READ_SM,
-    ESC_SM
-} LinkLayerSM;
-
 
 
 // SIZE of maximum acceptable payload.
