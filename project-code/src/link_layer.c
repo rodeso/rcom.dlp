@@ -442,7 +442,7 @@ int llread(unsigned char *packet)
                     else state = START;
                     break;
                 case READ_SM:
-                    printf("State: Read\n");
+                    //printf("State: Read\n");
                     if (byte == ESC) state = ESC_SM; //vai desfazer o byte stuffing
                     else if (byte == FLAG) //termina o pacote
                     { 
@@ -513,7 +513,7 @@ int llclose(int showStatistics)
             while (tries < retransmitions && state != STOP)
             {
                 unsigned char message[5] = {FLAG, A_Tx, C_DISC, A_Tx ^ C_DISC, FLAG}; 
-                if (writeBytesSerialPort(message, 5))
+                if (writeBytesSerialPort(message, 5) == -1)
                 {
                     printf("Error writing SET\n");
                     return -1;
@@ -593,12 +593,14 @@ int llclose(int showStatistics)
                 return -1;
             }
             if (state == 1) printf("State: STOP\n");
-            unsigned char message[5] = {FLAG, A_Tx, C_DISC, A_Tx ^ C_UA, FLAG};
-            if (writeBytesSerialPort(message, 5))
-                {
-                    printf("Error writing SET\n");
-                    return -1;
-                }
+            unsigned char message[5] = {FLAG, A_Tx, C_UA, A_Tx ^ C_UA, FLAG};
+            if (writeBytesSerialPort(message, 5) == -1)
+            {
+                printf("Error writing SET\n");
+                return -1;
+            }
+
+            printf("%d Frames were sent successfully!\n", showStatistics);
 
             break;
         }
@@ -677,20 +679,20 @@ int llclose(int showStatistics)
                 printf("message[%ld]: %#X\n", i, message[i]);
             }
             
-            if (writeBytesSerialPort(message, 5))
+            if (writeBytesSerialPort(message, 5) == -1)
             {
                 printf("Error writing UA\n");
                 return -1;
             }
+
+            printf("The program ran for %d seconds!\n", showStatistics);
             break;
         }
         default:
             printf("error in role");
             return -1;
     }
-	printf("Closing llclose\n");
 
-	printf("The size of frames is %d\n", showStatistics);
     int clstat = closeSerialPort();
     return clstat;
 }

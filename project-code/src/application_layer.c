@@ -213,9 +213,9 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
    				//buffer += packetSize+4;
 				
                 fwrite(buffer, sizeof(unsigned char), packetSize-4, newFile);
-                //free(buffer); 3
+                free(buffer);
             }
-            else continue;
+            else break;
         }
 
         fclose(newFile);
