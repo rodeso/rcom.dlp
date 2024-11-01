@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <time.h>
 
 // MISC
 #define _POSIX_SOURCE 1 // POSIX compliant source
@@ -496,6 +497,7 @@ int llclose(int showStatistics)
                     printf("Error writing SET\n");
                     return -1;
                 }
+                printf("Wrote DISC\n");
                 alarm(timeout);
                 alarmEnabled = TRUE;
                 while(alarmEnabled == TRUE && state != STOP)
@@ -565,12 +567,14 @@ int llclose(int showStatistics)
             {
                 return -1;
             }
+            printf("Received DISC\n");
             unsigned char message[5] = {FLAG, A_Tx, C_UA, A_Tx ^ C_UA, FLAG};
             if (writeBytesSerialPort(message, 5) == -1)
             {
                 printf("Error writing SET\n");
                 return -1;
             }
+            printf("Wrote UA\n");
 
             printf("%d frames were sent successfully!\n", showStatistics);
 
@@ -639,14 +643,19 @@ int llclose(int showStatistics)
                     }
                 }
             }
-            unsigned char message[5] = {FLAG, A_Rx, C_UA, A_Rx ^ C_UA, FLAG};
 
-            
+            printf("Received DISC\n");
+
+            unsigned char message[5] = {FLAG, A_Rx, C_UA, A_Rx ^ C_UA, FLAG};
             if (writeBytesSerialPort(message, 5) == -1)
             {
                 printf("Error writing UA\n");
                 return -1;
             }
+            printf("Wrote UA\n");
+            clock_t end = clock();
+		    double time_spent = (double)(end - (clock_t) showStatistics) / CLOCKS_PER_SEC;
+            printf("The program ran for %f seconds!\n", time_spent);
             break;
         }
         default:

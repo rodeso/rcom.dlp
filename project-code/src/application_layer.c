@@ -22,6 +22,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename)
 {
 	printf("Starting application layer\n");
+	start = clock();
     int info = 0;
 	LinkLayerRole rolex;
     //Role
@@ -222,6 +223,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         }
         fclose(newFile);
 		printf("%s created\n", filename);
+		info = (int) start;
 		break;
 	default:
 		printf("Invalid role\n");
