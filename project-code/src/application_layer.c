@@ -46,6 +46,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 		.timeout = timeout
 	};
 	strcpy(connectionParameters.serialPort,serialPort);
+
+	printf("Set connection settings\n");
     
     //llopen
 	int error1 = llopen(connectionParameters);
@@ -54,7 +56,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 		printf("Error in llopen\n");
 		return;
 	}
-	
+	printf("Established connection\n");
     switch (rolex)
     {
     case LlTx:
@@ -219,6 +221,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             else break;
         }
         fclose(newFile);
+		printf("%s created\n", filename);
 		break;
 	default:
 		printf("Invalid role\n");
@@ -230,4 +233,5 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 		printf("Error on llclose");
 		return;
 	}
+	printf("Exiting...\nGoodbye.\n");
 }

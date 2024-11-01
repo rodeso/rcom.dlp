@@ -143,6 +143,7 @@ int llopen(LinkLayer connectionParameters)
                     printf("Error writing SET\n");
                     return -1;
                 }
+                printf("Wrote SET\n");
                 alarm(timeout);
                 alarmEnabled = TRUE;
                 while(alarmEnabled == TRUE && state != STOP)
@@ -212,6 +213,7 @@ int llopen(LinkLayer connectionParameters)
             {
                 return -1;
             }
+            printf("Received UA\n");
             fd = 0;
             break;
         }
@@ -278,13 +280,15 @@ int llopen(LinkLayer connectionParameters)
                     }
                 }
             }
+            printf("Received SET\n");
+
             unsigned char message[5] = {FLAG, A_Rx, C_UA, A_Rx ^ C_UA, FLAG};
-            
             if (writeBytesSerialPort(message, 5) == -1)
             {
                 printf("Error writing UA\n");
                 return -1;
             }
+            printf("Wrote UA\n");
             fd = 1;
             break;
         }
@@ -369,7 +373,7 @@ int llwrite(const unsigned char *buf, int bufSize)
             rej = 0;
         }
     }
-    //free(frame); 2
+    free(frame);
     if(ack) return 0;
     return -1;
 }
@@ -568,7 +572,7 @@ int llclose(int showStatistics)
                 return -1;
             }
 
-            printf("%d Frames were sent successfully!\n", showStatistics);
+            printf("%d frames were sent successfully!\n", showStatistics);
 
             break;
         }
