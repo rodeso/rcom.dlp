@@ -369,10 +369,13 @@ int llwrite(const unsigned char *buf, int bufSize)
         else if (rej)
         {
             printf("Error: need retransmition\n");
-            tries++;
-            printf("Tries: %d\n", tries);
             rej = 0;
         }
+        else {
+            tries++;
+            printf("Tries: %d\n", tries);
+        }
+
     }
     free(frame);
     if(ack) return 0;
