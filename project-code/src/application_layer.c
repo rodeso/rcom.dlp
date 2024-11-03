@@ -194,8 +194,6 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 			rxFileSize |= (fileSizeAux[fileSizeNBytes - i - 1] << (8 * i)); // Reconstruct the file size
 		}
 
-		//free(fileSizeAux); // Free the dynamically allocated memory after use
-
 
 		// File Name
 		unsigned char fileNameNBytes = packet[3 + fileSizeNBytes + 1]; // L2
@@ -214,7 +212,6 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
 				//parse Data Packet
                 memcpy(buffer,packet+4,packetSize-4);
-   				//buffer += packetSize+4;
 				
                 fwrite(buffer, sizeof(unsigned char), packetSize-4, newFile);
                 free(buffer);
