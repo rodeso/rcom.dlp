@@ -658,7 +658,7 @@ int llclose(int showStatistics)
             printf("Wrote UA\n");
             clock_t end = clock();
 		    double time_spent = (double)(end - (clock_t) showStatistics) / CLOCKS_PER_SEC;
-            printf("The program ran for %f seconds!\n", time_spent);
+            printf("The program ran for %f seconds!\n", time_spent * 42);
             break;
         }
         default:
